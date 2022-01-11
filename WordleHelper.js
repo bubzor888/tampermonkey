@@ -70,6 +70,7 @@
 
     function pickNextWord(boardState) {
         //Weight is based on frequency in english language
+        //See https://www3.nd.edu/~busiforc/handouts/cryptography/letterfrequencies.html
         let letterWeights = new Map([
             ['e',11],['a',8],['r',8],
             ['i',8],['o',7],['t',7],
