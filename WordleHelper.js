@@ -48,7 +48,10 @@
                 $($(this)[0].shadowRoot).find("game-tile").each(function( index ) {
                     let letter = $(this).attr("letter")
                     if ($(this).attr("evaluation") == "absent") {
-                        boardState.absent.add(letter)
+                        //If the letter is a repeat of a present/correct letter don't add it
+                        if (typeof boardState.letters.get(letter) === "undefined") {
+                            boardState.absent.add(letter)
+                        }
                     } else {
                         if(typeof boardState.letters.get(letter) === "undefined") {
                             boardState.letters.set(letter, new Letter())
@@ -93,27 +96,20 @@
         //We will be in letter discover mode until we get at least 3
         let discoveryMode = boardState.letters.size < 3
 
-        //Now first filter, then pick based on weight
-        words.filter((word) => {
-            let prevLetters = new Set()
+        //Filter out words
+        let possibleWords = words.filter((word) => {
             for (let i = 0; i < word.length; i++) {
                 //Always filter out absent letters
                 if (boardState.absent.has(word.charAt(i))) {
                     return false
-                }
+                } 
 
-                //Filter further based on if we're discovering or guessing
-                if (discoveryMode) {
-                    //In discovery mode avoid present/correct letters or words with repeat letters
-                    if (typeof boardState.letters.get(word.charAt(i)) !== "undefined" 
-                            || prevLetters.has(word.charAt(i))) {
-                        return false
-                    } else {
-                        prevLetters.add(word.charAt(i))
-                    }
-                }
+                //In discovery mode avoid present/correct letters
+                if (discoveryMode && typeof boardState.letters.get(word.charAt(i)) !== "undefined" ) {
+                    return false
+                } 
             }
-
+                
             //In guess mode, we want to filter out words that don't use the present/correct letters
             let includeWord = true
             if (!discoveryMode) {
@@ -137,7 +133,27 @@
             }
 
             return includeWord
-        }).forEach((word) => {
+        })
+
+        //Make another list excluding repeated letters
+        let noRepeats = possibleWords.filter((word) => {
+            let prevLetters = new Set()
+            for (let i = 0; i < word.length; i++) {
+                if (prevLetters.has(word.charAt(i))) {
+                    return false
+                } else {
+                    prevLetters.add(word.charAt(i))    
+                }
+            }
+            return true
+        })
+
+        //If noRepeats has any words, guess from there first
+        if (noRepeats.length !== 0) {
+            possibleWords = noRepeats
+        }
+
+        possibleWords.forEach((word) => {
             let wordWeight = 0
             for (let i = 0; i < word.length; i++) {
                 wordWeight += letterWeights.get(word.charAt(i))
@@ -148,7 +164,7 @@
             }
         })
 
-        console.log("Best word: " + bestWord + " with weight " + bestWordWeight)
+        console.log("Guess " + boardState.guesses + ": Best word is " + bestWord + " with weight " + bestWordWeight)
 
         return bestWord
     }
